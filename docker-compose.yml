@@ -1,0 +1,70 @@
+x-build-base: &build-base
+  context: .
+  dockerfile: docker/Dockerfile
+
+x-service-base: &service-base
+  working_dir: /app
+  volumes:
+    - .:/app
+    - /app/vendor
+
+services:
+  # ── PHP 8.3 + DBAL 3 + ORM 3 ──
+  php83-dbal3:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.3'
+        DBAL_CONSTRAINT: '^3.8'
+        ORM_CONSTRAINT: '^3.0'
+
+  # ── PHP 8.3 + DBAL 4 + ORM 3 ──
+  php83-dbal4:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.3'
+        DBAL_CONSTRAINT: '^4.0'
+        ORM_CONSTRAINT: '^3.0'
+
+  # ── PHP 8.4 + DBAL 3 + ORM 3 ──
+  php84-dbal3:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.4'
+        DBAL_CONSTRAINT: '^3.8'
+        ORM_CONSTRAINT: '^3.0'
+
+  # ── PHP 8.4 + DBAL 4 + ORM 3 ──
+  php84-dbal4:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.4'
+        DBAL_CONSTRAINT: '^4.0'
+        ORM_CONSTRAINT: '^3.0'
+
+  # ── PHP 8.5 + DBAL 3 + ORM 3 ──
+  php85-dbal3:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.5'
+        DBAL_CONSTRAINT: '^3.8'
+        ORM_CONSTRAINT: '^3.0'
+
+  # ── PHP 8.5 + DBAL 4 + ORM 3 ──
+  php85-dbal4:
+    <<: *service-base
+    build:
+      <<: *build-base
+      args:
+        PHP_VERSION: '8.5'
+        DBAL_CONSTRAINT: '^4.0'
+        ORM_CONSTRAINT: '^3.0'

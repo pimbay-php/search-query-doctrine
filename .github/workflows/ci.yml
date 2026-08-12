@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, contrib]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php-version }} + DBAL ${{ matrix.dbal-constraint }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.3', '8.4', '8.5']
+        dbal-constraint: ['^3.8', '^4.0']
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+
+      - name: Require Doctrine DBAL/ORM combo
+        run: composer require --no-interaction --no-progress --no-scripts "doctrine/dbal:${{ matrix.dbal-constraint }}" "doctrine/orm:^3.0"
+
+      - run: composer install --prefer-dist --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit --no-coverage
+
+  coverage-and-mutation:
+    name: Coverage + mutation testing (PHP 8.3 + DBAL 4.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: xdebug
+
+      - name: Require Doctrine DBAL/ORM combo
+        run: composer require --no-interaction --no-progress --no-scripts "doctrine/dbal:^4.0" "doctrine/orm:^3.0"
+
+      - run: composer install --prefer-dist --no-progress
+
+      - name: Tests with coverage
+        run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=var/tests/coverage.xml -d --min-coverage=100
+
+      - name: Mutation testing
+        run: XDEBUG_MODE=coverage vendor/bin/infection --threads=max --min-msi=100 --min-covered-msi=100
+
+  static-analysis:
+    name: Style & static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - run: composer install --prefer-dist --no-progress
+
+      - name: Code style check
+        run: composer php:cs
+
+      - name: Static analysis
+        run: composer php:stan
