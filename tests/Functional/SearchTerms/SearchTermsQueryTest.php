@@ -13,12 +13,9 @@ use PimBay\SearchQuery\SearchTerms\ParsedSearchTerms;
 use PimBay\SearchQuery\SearchTerms\SearchTermsConfig;
 
 /**
- * One divergence from MariaDB is deliberately not exercised here: MariaDB treats `\` as the
- * implicit LIKE escape character, which is what SqlHelper::escapeLike() assumes; SQLite requires
- * an explicit `LIKE ... ESCAPE '\'` clause (which SearchTermsQuery never adds, since it targets
- * MariaDB) to honor that same escaping, so a literal `%`/`_` in a search value can't be exercised
- * end-to-end against SQLite here. The escaped parameter values themselves are already covered
- * exactly in tests/Unit/SearchTerms/SearchTermsQueryTest.php.
+ * SearchTermsQuery always appends an explicit `LIKE ... ESCAPE '\'` clause (see SqlHelper::likeEscapeClause()),
+ * so SqlHelper::escapeLike()'s backslash-escaping of a literal `%`/`_` is honored the same way on every engine the
+ * explicit clause runs against, SQLite included — there is no MariaDB-only behavior here.
  */
 final class SearchTermsQueryTest extends TestCase
 {
@@ -117,6 +114,29 @@ final class SearchTermsQueryTest extends TestCase
         array $expectedNames,
     ): void {
         self::assertSame($expectedNames, $this->filteredNames($parsed, $config));
+    }
+
+    #[Test]
+    public function literalPercentAndUnderscoreAreEscapedNotInterpretedAsWildcardsOnSqlite(): void
+    {
+        $connection = DbalFixture::createConnection();
+        DbalFixture::seedProducts($connection, [
+            ['id' => 1, 'name' => 'a_b', 'price' => 10],
+            ['id' => 2, 'name' => 'axb', 'price' => 20],
+            ['id' => 3, 'name' => '50%off', 'price' => 30],
+            ['id' => 4, 'name' => '50-anything-off', 'price' => 40],
+        ]);
+        $qb = DbalFixture::productQueryBuilder($connection)->orderBy('id');
+
+        (new SearchTermsQuery())->apply(
+            $qb,
+            'name',
+            new ParsedSearchTerms(equals: [], notEquals: [], likes: ['a_b', '50%off'], notLikes: []),
+            'p',
+            new SearchTermsConfig(anywhere: false),
+        );
+
+        self::assertSame(['a_b', '50%off'], array_column($qb->fetchAllAssociative(), 'name'));
     }
 
     /**
