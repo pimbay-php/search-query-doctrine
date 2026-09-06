@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-08-16
+## [1.0.1] - 2026-08-16
 
 ### Added
 - `Adapter\DbalSimpleAdapter` and `Adapter\OrmSimpleAdapter` — implement `pimbay/search-query`'s `PageAdapter`, `SliceAdapter`, `CountableAdapter`, `HeadableAdapter`, `AllAdapter` over a Doctrine QueryBuilder, no field name required.

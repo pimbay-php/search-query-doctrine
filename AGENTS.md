@@ -22,7 +22,6 @@ composer test:85-dbal4  # docker compose run — PHP 8.5 + DBAL 4.0 + ORM 3.0
 composer test:all       # all test:*-dbal* combos
 composer test:coverage  # docker compose run, php83-dbal4 combo — phpunit --coverage-text
 composer test:mutation # infection — mutation testing, --min-msi=100 --min-covered-msi=100
-composer docker:build   # docker compose build
 composer ci             # php:cs + php:stan + test:all + test:mutation
 ```
 
