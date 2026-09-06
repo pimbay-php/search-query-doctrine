@@ -136,12 +136,7 @@ final class SearchTermsQueryTest extends TestCase
             new SearchTermsConfig(anywhere: false),
         );
 
-        $names = array_map(
-            static fn (mixed $name): string => (string) $name,
-            array_column($qb->fetchAllAssociative(), 'name'),
-        );
-
-        self::assertSame(['a_b', '50%off'], $names);
+        self::assertSame(['a_b', '50%off'], array_column($qb->fetchAllAssociative(), 'name'));
     }
 
     /**
