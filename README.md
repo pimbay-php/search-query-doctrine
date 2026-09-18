@@ -31,9 +31,7 @@ Wraps a Doctrine ORM `QueryBuilder`. No field name needed — `count()` derives 
 declare(strict_types=1);
 
 use PimBay\SearchQuery\Doctrine\Adapter\OrmSimpleAdapter;
-use PimBay\SearchQuery\Page\PageIndex;
 use PimBay\SearchQuery\Page\PageAssembler;
-use PimBay\SearchQuery\Size;
 
 $qb = $entityManager->createQueryBuilder()
     ->select('r')
@@ -42,7 +40,7 @@ $qb = $entityManager->createQueryBuilder()
 
 $adapter = new OrmSimpleAdapter($qb);
 
-$result = (new PageAssembler())->paginate($adapter, new PageIndex(1), new Size(20));
+$result = (new PageAssembler())->paginate($adapter, 1, 20);
 ```
 
 ### `Adapter\OrmIdentityAdapter`
@@ -73,9 +71,7 @@ Same two classes, same shapes, over a Doctrine DBAL `QueryBuilder` instead — `
 declare(strict_types=1);
 
 use PimBay\SearchQuery\Doctrine\Adapter\DbalSimpleAdapter;
-use PimBay\SearchQuery\Page\PageIndex;
 use PimBay\SearchQuery\Page\PageAssembler;
-use PimBay\SearchQuery\Size;
 
 $qb = $connection->createQueryBuilder()
     ->select('*')
@@ -84,7 +80,7 @@ $qb = $connection->createQueryBuilder()
 
 $adapter = new DbalSimpleAdapter($qb);
 
-$result = (new PageAssembler())->paginate($adapter, new PageIndex(1), new Size(20));
+$result = (new PageAssembler())->paginate($adapter, 1, 20);
 ```
 
 ### `Adapter\OrmFetchJoinSafeAdapter`
@@ -98,9 +94,7 @@ For an ORM `QueryBuilder` that `fetch`-joins a to-many association — a plain `
 declare(strict_types=1);
 
 use PimBay\SearchQuery\Doctrine\Adapter\OrmFetchJoinSafeAdapter;
-use PimBay\SearchQuery\Page\PageIndex;
 use PimBay\SearchQuery\Page\PageAssembler;
-use PimBay\SearchQuery\Size;
 
 $qb = $entityManager->createQueryBuilder()
     ->select('r', 'items')
@@ -111,7 +105,7 @@ $qb = $entityManager->createQueryBuilder()
 
 $adapter = new OrmFetchJoinSafeAdapter($qb);
 
-$result = (new PageAssembler())->paginate($adapter, new PageIndex(1), new Size(20));
+$result = (new PageAssembler())->paginate($adapter, 1, 20);
 ```
 
 `$useOutputWalkers` defaults to `null` — Doctrine's `Paginator` auto-detects a fetch-joined to-many association (exactly the case above) and turns output walkers on by itself, so leave it unset in the common case.
