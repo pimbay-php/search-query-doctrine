@@ -7,7 +7,7 @@
 
 ## Current focus
 
-`src/` built: `SqlHelper.php`, `SearchTerms/SearchTermsQuery.php`, flat `Adapter/` namespace with driver name in the class name — `Adapter/DbalSimpleAdapter.php` + `Adapter/DbalIdentityAdapter.php`, `Adapter/OrmSimpleAdapter.php` + `Adapter/OrmIdentityAdapter.php` + `Adapter/OrmFetchJoinSafeAdapter.php`. PHP config files (composer.json, phpstan.neon.dist, phpunit.xml.dist, infection.json5, .php-cs-fixer.*, docker-compose.yml, docker/Dockerfile, .github/workflows/ci.yml) are in place. `tests/Unit` and `tests/Functional` suites are written; preparing for first release.
+Nothing in progress right now.
 
 ## Open questions
 
@@ -28,4 +28,3 @@
 ## Ideas / future plans
 
 - A `CursorAdapter` implementation once its constructor shape (explicit keyset column(s)) is resolved.
-- Functional test suite against the Docker Compose matrix, using `FunctionalTestCase`-style shared setup.
