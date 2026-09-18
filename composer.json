@@ -86,7 +86,7 @@
       "@test:85-dbal3",
       "@test:85-dbal4"
     ],
-    "test:coverage": "docker compose run --rm php83-dbal4 vendor/bin/phpunit --coverage-text --coverage-clover=var/tests/coverage.xml -d --min-coverage=100",
+    "test:coverage": "docker compose run --rm php83-dbal4 vendor/bin/phpunit --coverage-text --coverage-clover=var/reports/coverage/report.xml -d --min-coverage=100",
     "test:mutation": "docker compose run --rm php83-dbal4 vendor/bin/infection --threads=max --min-msi=100 --min-covered-msi=100",
     "ci": [
       "@php:cs",

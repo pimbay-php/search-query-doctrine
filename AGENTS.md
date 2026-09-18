@@ -35,7 +35,7 @@ A bare command never mutates — only the `:fix` variant writes to disk.
 - **`final` by default**; remove only with a stated, repo-specific reason.
 - **`readonly` properties** by default — promoted constructor properties over separate declaration + assignment.
 - **PSR-4**, one class per file, namespace mirrors directory 1:1.
-- **Comments** only where non-obvious, always English. PHPDoc only for shapes PHPStan can't infer.
+- **Comments** only where they explain a non-trivial decision or *why* — never restate *what* the code already says. Don't comment obvious lines. Keep to 1-2 lines; more only for genuinely complex logic. Always in English.
 - **Markdown**: semantic linebreaks — break at sentence end, never inside a list item.
 - **Docs discipline**: no "Project Layout" in READMEs — the tree speaks for itself.
 
