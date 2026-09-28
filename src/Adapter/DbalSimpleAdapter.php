@@ -41,6 +41,7 @@ readonly class DbalSimpleAdapter implements PageAdapter, SliceAdapter, Countable
     {
         $clone = $this->cloneQuery();
         $clone->resetOrderBy();
+        $clone->setFirstResult(0)->setMaxResults(null);
 
         /** @var int|string $count */
         $count = $clone->select('COUNT(*)')->fetchOne();
@@ -58,7 +59,11 @@ readonly class DbalSimpleAdapter implements PageAdapter, SliceAdapter, Countable
 
     public function all(): iterable
     {
-        return $this->cloneQuery()->executeQuery()->iterateAssociative();
+        return $this->cloneQuery()
+            ->setFirstResult(0)
+            ->setMaxResults(null)
+            ->executeQuery()
+            ->iterateAssociative();
     }
 
     public function pageView(int $offset, int $size): PageChunk

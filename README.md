@@ -11,7 +11,7 @@ Doctrine DBAL and ORM adapters for [`pimbay/search-query`](https://packagist.org
 `DbalIdentityAdapter`/`OrmIdentityAdapter` (same two drivers) additionally implement `IdentifiableAdapter` for the cases that need a cheap `ids()` read — the only capability that needs a named field, so it's the only one that asks for one.
 `SearchTerms\SearchTermsQuery` turns an already-parsed `SearchTerms\ParsedSearchTerms` (from `pimbay/search-query`'s `SearchTermsParser`) into `andWhere()` conditions — free-text search wired into the same `QueryBuilder`.
 
-Supports Doctrine DBAL `^3.8 || ^4.0`. `doctrine/orm` is optional — only needed if you use `Adapter\OrmSimpleAdapter`; `Adapter\DbalSimpleAdapter` has no ORM dependency.
+Supports Doctrine DBAL `^3.8 || ^4.0`. `doctrine/orm` is optional and must be `^3.5` where used — only needed if you use `Adapter\OrmSimpleAdapter`; `Adapter\DbalSimpleAdapter` has no ORM dependency.
 
 ## Installation
 
@@ -23,7 +23,12 @@ composer require pimbay/search-query-doctrine
 
 ### `Adapter\OrmSimpleAdapter`
 
-Wraps a Doctrine ORM `QueryBuilder`. No field name needed — `count()` derives its `COUNT(<rootAlias>)` from the `QueryBuilder` itself.
+Wraps a Doctrine ORM `QueryBuilder`. No field name needed — `count()` selects `COUNT(1)`, which DQL accepts without a root alias.
+
+`count()`, `all()` and `ids()` ignore any `LIMIT`/`OFFSET` already set on the `QueryBuilder` you hand over: a count is of the whole set, and `AllAdapter`/`IdentifiableAdapter` are the unbounded reads by contract.
+
+Mind the shape behind the `iterable` those contracts declare: `head()` hands back a lazy, one-pass generator on the ORM adapter but an already-materialised array on the DBAL one, and `all()` is a generator on both.
+Iterate once, or wrap the result in `iterator_to_array()` yourself if you need to walk it twice.
 
 ```php
 <?php
@@ -130,30 +135,42 @@ $parsed = (new SearchTermsParser())->parse(['dog', 'hors*', '-cow'], $config);
 (new SearchTermsQuery())->apply($qb, 'title', $parsed, 'title', $config);
 ```
 
-> **Security note:** `$column` (here and in `applyString()`) is interpolated directly into the generated SQL/DQL fragment — only the parsed *values* go through bound parameters (`:paramPrefixN`). Only ever pass a literal from your own code (or an allowlist you control); never pass a raw, unvalidated end-user string as `$column`, or it opens a SQL/DQL injection path through the column name itself.
+`apply()` numbers its bound parameters `:{$paramPrefix}1`, `:{$paramPrefix}2`, … from `1` on every call, so give each call a `$paramPrefix` of its own — two calls sharing a prefix bind to the same placeholders.
+
+`SearchTermsConfig`'s `anywhere` (default `true`) adds a **leading** `%` only; a trailing wildcard comes from the term's own like marker.
+So with the default markers `hors*` searches for `%hors%`, `*hors` for `%hors`, and a term with no marker at all is an `=` comparison that `anywhere` does not touch.
+
+Negated terms (`-cow` above) also match records whose column is `NULL`. Pass `new SearchTermsConfig(ignoredTermsMatchNull: false)` for the stricter reading that excludes them.
+
+> **Security note:** `$column` and `$paramPrefix` (here and in `applyString()`) are interpolated directly into the generated SQL/DQL fragment — only the parsed *values* go through bound parameters (`:paramPrefixN`).
 
 ## Testing
 
 ```bash
-composer test:83-dbal3  # PHP 8.3 + DBAL 3.8 + ORM 3.0
-composer test:83-dbal4  # PHP 8.3 + DBAL 4.0 + ORM 3.0
-composer test:84-dbal3  # PHP 8.4 + DBAL 3.8 + ORM 3.0
-composer test:84-dbal4  # PHP 8.4 + DBAL 4.0 + ORM 3.0
-composer test:85-dbal3  # PHP 8.5 + DBAL 3.8 + ORM 3.0
-composer test:85-dbal4  # PHP 8.5 + DBAL 4.0 + ORM 3.0
-composer test:all       # all of the above
+composer test:all       # every combination in the table below
 composer test:coverage  # php83-dbal4 combo, --coverage-text
-composer test:mutation # infection — mutation testing, --min-msi=100 --min-covered-msi=100
+composer test:mutation  # infection — mutation testing, --min-msi=100 --min-covered-msi=100
 ```
 
 Each combo runs in its own Docker image with dependencies baked in at build time — no `composer update` happens at test-run time, and combos never share or overwrite each other's installed dependency versions.
 Requires Docker and Docker Compose locally.
 
-| PHP | DBAL 3.8 | DBAL 4.0 |
-|:----|:----|:----|
-| **8.3** | ✅ | ✅ |
-| **8.4** | ✅ | ✅ |
-| **8.5** | ✅ | ✅ |
+Functional tests run against in-memory SQLite in every combination, and additionally against MariaDB 11 in the two PHP 8.3 ones.
+
+Each combo resolves the *highest* release matching its constraint, so the `^3.8` rows run whatever 3.x is current, not 3.8.0 itself.
+
+| Command | PHP | DBAL | ORM | SQLite | MariaDB 11 |
+|:---|:---|:---|:---|:---:|:---:|
+| `composer test:83-dbal3` | 8.3 | `^3.8` | `^3.5` | ✅ | ✅ |
+| `composer test:83-dbal4` | 8.3 | `^4.0` | `^3.5` | ✅ | ✅ |
+| `composer test:84-dbal3` | 8.4 | `^3.8` | `^3.5` | ✅ | — |
+| `composer test:84-dbal4` | 8.4 | `^4.0` | `^3.5` | ✅ | — |
+| `composer test:85-dbal3` | 8.5 | `^3.8` | `^3.5` | ✅ | — |
+| `composer test:85-dbal4` | 8.5 | `^4.0` | `^3.5` | ✅ | — |
+
+`test:coverage` and `test:mutation` reuse the `php83-dbal4` image with `SEARCH_QUERY_MYSQL_DSN` emptied, so they are SQLite-only.
+The MariaDB rows `depends_on` a `mariadb` service that `docker compose` starts and health-checks for you; stop it again with `docker compose down`.
+Outside Docker, `vendor/bin/phpunit` skips the MariaDB half unless you point `SEARCH_QUERY_MYSQL_DSN` at a server yourself (`mysql://user:password@host:3306/dbname`).
 
 ## Development Helpers
 
@@ -163,18 +180,19 @@ composer php:cs:fix    # same, applies the fix
 composer php:stan      # phpstan analyse
 ```
 
-## Packages in the stack
-
-| Package | Description |
-|---|---|
-| `pimbay/search-query` | Framework-agnostic contracts this package adapts Doctrine to — no datasource code of its own. |
-| `pimbay/search-query-doctrine` | This package — Doctrine DBAL/ORM adapters. |
-
 ## Architecture & Decisions
 
 - **[docs/context.md](docs/context.md)** — current working state: what's in progress, what's next.
 - **[docs/DECISIONS.md](docs/DECISIONS.md)** — why things are built the way they are, in the order the decisions were made.
 - **[docs/CHANGELOG.md](docs/CHANGELOG.md)** — version history.
+
+## Packages in the stack
+
+| Package | Description |
+|---|---|
+| `pimbay/search-query` | Framework-agnostic contracts this package adapts Doctrine to — no datasource code of its own. |
+| `pimbay/search-query-doctrine` | This package — adapters over a Doctrine DBAL or ORM QueryBuilder. |
+| `pimbay/search-query-pimcore` | Adapters over a Pimcore listing — the sibling package for Pimcore projects. |
 
 ## License
 

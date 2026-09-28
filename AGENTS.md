@@ -13,12 +13,12 @@ composer install
 composer php:cs         # php-cs-fixer, --dry-run --diff (check only, never mutates)
 composer php:cs:fix     # same, applies the fix
 composer php:stan       # phpstan analyse, level: max
-composer test:83-dbal3  # docker compose run — PHP 8.3 + DBAL 3.8 + ORM 3.0
-composer test:83-dbal4  # docker compose run — PHP 8.3 + DBAL 4.0 + ORM 3.0
-composer test:84-dbal3  # docker compose run — PHP 8.4 + DBAL 3.8 + ORM 3.0
-composer test:84-dbal4  # docker compose run — PHP 8.4 + DBAL 4.0 + ORM 3.0
-composer test:85-dbal3  # docker compose run — PHP 8.5 + DBAL 3.8 + ORM 3.0
-composer test:85-dbal4  # docker compose run — PHP 8.5 + DBAL 4.0 + ORM 3.0
+composer test:83-dbal3  # docker compose run — PHP 8.3 + DBAL ^3.8 + ORM ^3.5 + MariaDB 11
+composer test:83-dbal4  # docker compose run — PHP 8.3 + DBAL ^4.0 + ORM ^3.5 + MariaDB 11
+composer test:84-dbal3  # docker compose run — PHP 8.4 + DBAL ^3.8 + ORM ^3.5
+composer test:84-dbal4  # docker compose run — PHP 8.4 + DBAL ^4.0 + ORM ^3.5
+composer test:85-dbal3  # docker compose run — PHP 8.5 + DBAL ^3.8 + ORM ^3.5
+composer test:85-dbal4  # docker compose run — PHP 8.5 + DBAL ^4.0 + ORM ^3.5
 composer test:all       # all test:*-dbal* combos
 composer test:coverage  # docker compose run, php83-dbal4 combo — phpunit --coverage-text
 composer test:mutation # infection — mutation testing, --min-msi=100 --min-covered-msi=100
@@ -35,8 +35,8 @@ A bare command never mutates — only the `:fix` variant writes to disk.
 - **`final` by default**; remove only with a stated, repo-specific reason.
 - **`readonly` properties** by default — promoted constructor properties over separate declaration + assignment.
 - **PSR-4**, one class per file, namespace mirrors directory 1:1.
-- **Comments** only where they explain a non-trivial decision or *why* — never restate *what* the code already says. Don't comment obvious lines. Keep to 1-2 lines; more only for genuinely complex logic. Always in English.
-- **Markdown**: semantic linebreaks — break at sentence end, never inside a list item.
+- **Comments** only where they explain a non-trivial decision or _why_ — never restate _what_ the code already says. Don't comment obvious lines. Keep to 1-2 lines; more only for genuinely complex logic. Always in English. Wrap at 120 columns.
+- **Markdown** (`.md` only): semantic linebreaks — break at sentence end, never inside a list item.
 - **Docs discipline**: no "Project Layout" in READMEs — the tree speaks for itself.
 
 ## Architecture
@@ -63,6 +63,7 @@ Always applies — every repo here is published on Packagist. Every exported-sym
 - **PHPUnit 11**, `tests/Unit/` + `tests/Functional/` (real SQLite in-memory connection) — mirrors `src/` 1:1.
 - **`tests/Unit/`** — every collaborator faked (a fake/mock `QueryBuilder`), or the module has no external collaborator (`SqlHelper`).
 - **`tests/Functional/`** — runs against a real SQLite in-memory `Connection`/`EntityManager` — don't mock what it can spin up for real.
+- **Two engines** — `SearchTermsQueryTest` runs every scenario on SQLite *and* on MariaDB 11 (`SEARCH_QUERY_MYSQL_DSN`, skipped when unset).
 - **Coverage: 100%** — hard gate; a dropped coverage change comes with new tests, not an exclusion.
 - **Mutation testing: Infection, min MSI 100%** (`composer test:mutation`) — an escaped mutant needs a stronger assertion, not a suppressed mutator.
 - **`#[Test]` attribute**, not `test`-prefix. `#[DataProvider('methodName')]` for parameterized cases.

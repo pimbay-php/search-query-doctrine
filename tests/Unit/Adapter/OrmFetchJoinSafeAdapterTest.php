@@ -40,10 +40,8 @@ final class OrmFetchJoinSafeAdapterTest extends TestCase
     protected function setUp(): void
     {
         $em = OrmFixture::createEntityManager();
-        // Product "a" and "b" each have 2+ tags — a naive LIMIT/OFFSET over the joined SQL rows
-        // (one SQL row per product/tag pair) would both miscount and truncate mid-collection
-        // without the Paginator's fetchJoinCollection handling; that's exactly what this
-        // adapter exists to prevent.
+        // "a" and "b" each have 2+ tags: a naive LIMIT/OFFSET over the joined rows would both miscount and
+        // truncate mid-collection — exactly what this adapter exists to prevent.
         OrmFixture::seedProducts($em, [
             ['name' => 'a', 'price' => 10, 'tags' => ['red', 'small', 'sale']],
             ['name' => 'b', 'price' => 20, 'tags' => ['red', 'large']],
@@ -78,9 +76,12 @@ final class OrmFetchJoinSafeAdapterTest extends TestCase
             $byName[$product->name] = array_map(static fn ($t) => $t->name, $product->tags->toArray());
         }
 
-        self::assertSame(['red', 'small', 'sale'], $byName['a']);
-        self::assertSame(['red', 'large'], $byName['b']);
-        self::assertSame([], $byName['c']);
+        // Compared as one map rather than key by key: this also pins that there are exactly these three
+        // roots, which three separate lookups would let slip.
+        self::assertSame(
+            ['a' => ['red', 'small', 'sale'], 'b' => ['red', 'large'], 'c' => []],
+            $byName,
+        );
     }
 
     /**

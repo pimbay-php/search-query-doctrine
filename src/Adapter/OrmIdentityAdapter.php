@@ -40,6 +40,8 @@ final readonly class OrmIdentityAdapter extends OrmSimpleAdapter implements Iden
         /** @var array<int|string> $ids */
         $ids = $this->cloneQuery()
             ->select($this->idField)
+            ->setFirstResult(0)
+            ->setMaxResults(null)
             ->getQuery()
             ->getSingleColumnResult();
 
