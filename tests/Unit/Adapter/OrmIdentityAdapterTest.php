@@ -62,6 +62,26 @@ final class OrmIdentityAdapterTest extends TestCase
     }
 
     #[Test]
+    public function idsIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        // ids() is the whole set, like all(); honouring the window truncates it with nothing to signal that.
+        $em = OrmFixture::createEntityManager();
+        OrmFixture::seedProducts($em, [
+            ['name' => 'a', 'price' => 10],
+            ['name' => 'b', 'price' => 20],
+            ['name' => 'c', 'price' => 30],
+        ]);
+        $qb = $em->createQueryBuilder()
+            ->select('p')
+            ->from(Product::class, 'p')
+            ->orderBy('p.id')
+            ->setFirstResult(1)
+            ->setMaxResults(1);
+
+        self::assertSame([1, 2, 3], (new OrmIdentityAdapter($qb, 'p.id'))->ids());
+    }
+
+    #[Test]
     public function inheritsCountableBehaviorFromOrmSimpleAdapter(): void
     {
         self::assertSame(3, $this->adapter->count());

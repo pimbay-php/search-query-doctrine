@@ -9,6 +9,22 @@ x-service-base: &service-base
     - /app/vendor
 
 services:
+  # ── MariaDB 11 — the only engine here besides SQLite.
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: 'root'
+      MARIADB_DATABASE: 'search_query'
+      MARIADB_USER: 'search_query'
+      MARIADB_PASSWORD: 'search_query'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: '3s'
+      timeout: '3s'
+      retries: 20
+
   # ── PHP 8.3 + DBAL 3 + ORM 3 ──
   php83-dbal3:
     <<: *service-base
@@ -17,7 +33,12 @@ services:
       args:
         PHP_VERSION: '8.3'
         DBAL_CONSTRAINT: '^3.8'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      SEARCH_QUERY_MYSQL_DSN: 'mysql://search_query:search_query@mariadb:3306/search_query'
 
   # ── PHP 8.3 + DBAL 4 + ORM 3 ──
   php83-dbal4:
@@ -27,7 +48,12 @@ services:
       args:
         PHP_VERSION: '8.3'
         DBAL_CONSTRAINT: '^4.0'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      SEARCH_QUERY_MYSQL_DSN: 'mysql://search_query:search_query@mariadb:3306/search_query'
 
   # ── PHP 8.4 + DBAL 3 + ORM 3 ──
   php84-dbal3:
@@ -37,7 +63,7 @@ services:
       args:
         PHP_VERSION: '8.4'
         DBAL_CONSTRAINT: '^3.8'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'
 
   # ── PHP 8.4 + DBAL 4 + ORM 3 ──
   php84-dbal4:
@@ -47,7 +73,7 @@ services:
       args:
         PHP_VERSION: '8.4'
         DBAL_CONSTRAINT: '^4.0'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'
 
   # ── PHP 8.5 + DBAL 3 + ORM 3 ──
   php85-dbal3:
@@ -57,7 +83,7 @@ services:
       args:
         PHP_VERSION: '8.5'
         DBAL_CONSTRAINT: '^3.8'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'
 
   # ── PHP 8.5 + DBAL 4 + ORM 3 ──
   php85-dbal4:
@@ -67,4 +93,4 @@ services:
       args:
         PHP_VERSION: '8.5'
         DBAL_CONSTRAINT: '^4.0'
-        ORM_CONSTRAINT: '^3.0'
+        ORM_CONSTRAINT: '^3.5'

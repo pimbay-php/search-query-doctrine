@@ -16,26 +16,28 @@ namespace PimBay\SearchQuery\Doctrine;
 final class SqlHelper
 {
     /**
-     * MySQL/MariaDB/PostgreSQL treat this as the implicit default `LIKE` escape character — SQLite,
-     * SQL Server, and Oracle don't define an implicit one, so an explicit `ESCAPE` clause (see
-     * {@see likeEscapeClause()}) is required on those engines for `escapeLike()`'s output to mean
-     * what it says.
+     * Deliberately not a backslash and deliberately not configurable: a backslash has no spelling
+     * that is valid on MySQL/MariaDB and on PostgreSQL/SQLite at once. See docs/DECISIONS.md.
      */
-    public const string DEFAULT_LIKE_ESCAPE_CHAR = '\\';
+    private const string LIKE_ESCAPE_CHAR = '~';
 
     /**
-     * Neutralizes a literal `$escapeChar` first, then escapes `_`/`%` — reversing the order would
-     * double-escape an existing `$escapeChar` in the value.
+     * Neutralizes a literal escape character first, then escapes `_`/`%` — reversing the order
+     * would double-escape an escape character already present in the value.
      */
-    public static function escapeLike(string $like, string $escapeChar = self::DEFAULT_LIKE_ESCAPE_CHAR): string
+    public static function escapeLike(string $like): string
     {
-        $escaped = str_replace($escapeChar, $escapeChar.$escapeChar, $like);
+        $escaped = str_replace(self::LIKE_ESCAPE_CHAR, self::LIKE_ESCAPE_CHAR.self::LIKE_ESCAPE_CHAR, $like);
 
-        return str_replace(['_', '%'], [$escapeChar.'_', $escapeChar.'%'], $escaped);
+        return str_replace(['_', '%'], [self::LIKE_ESCAPE_CHAR.'_', self::LIKE_ESCAPE_CHAR.'%'], $escaped);
     }
 
-    public static function likeEscapeClause(string $escapeChar = self::DEFAULT_LIKE_ESCAPE_CHAR): string
+    /**
+     * Always emitted, on every engine: SQLite, SQL Server and Oracle define no implicit escape character at all,
+     * and MySQL/MariaDB's implicit one is the backslash this class does not use.
+     */
+    public static function likeEscapeClause(): string
     {
-        return \sprintf("ESCAPE '%s'", str_replace("'", "''", $escapeChar));
+        return \sprintf("ESCAPE '%s'", self::LIKE_ESCAPE_CHAR);
     }
 }

@@ -29,14 +29,17 @@
   "require": {
     "php": ">=8.3",
     "doctrine/dbal": "^3.8 || ^4.0",
-    "pimbay/search-query": "^1.0.0"
+    "pimbay/search-query": "^2.1"
+  },
+  "conflict": {
+    "doctrine/orm": "<3.5"
   },
   "suggest": {
-    "doctrine/orm": "Needed only when using Adapter\\OrmSimpleAdapter/OrmIdentityAdapter/OrmFetchJoinSafeAdapter"
+    "doctrine/orm": "^3.5, needed only when using Adapter\\OrmSimpleAdapter/OrmIdentityAdapter/OrmFetchJoinSafeAdapter"
   },
   "require-dev": {
-    "doctrine/orm": "^3.0",
-    "psr/cache": "^1 || ^2 || ^3",
+    "doctrine/orm": "^3.5",
+    "psr/cache": "^2 || ^3",
     "friendsofphp/php-cs-fixer": "^3.95",
     "infection/infection": "^0.34.2",
     "phpstan/phpstan": "^2.0",
@@ -86,8 +89,8 @@
       "@test:85-dbal3",
       "@test:85-dbal4"
     ],
-    "test:coverage": "docker compose run --rm php83-dbal4 vendor/bin/phpunit --coverage-text --coverage-clover=var/reports/coverage/report.xml -d --min-coverage=100",
-    "test:mutation": "docker compose run --rm php83-dbal4 vendor/bin/infection --threads=max --min-msi=100 --min-covered-msi=100",
+    "test:coverage": "docker compose run --rm -e SEARCH_QUERY_MYSQL_DSN= php83-dbal4 vendor/bin/phpunit --coverage-text --coverage-clover=var/reports/coverage/report.xml -d --min-coverage=100",
+    "test:mutation": "docker compose run --rm -e SEARCH_QUERY_MYSQL_DSN= php83-dbal4 vendor/bin/infection --threads=max --min-msi=100 --min-covered-msi=100",
     "ci": [
       "@php:cs",
       "@php:stan",

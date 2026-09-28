@@ -35,6 +35,8 @@ final readonly class DbalIdentityAdapter extends DbalSimpleAdapter implements Id
         /** @var array<int|string> $ids */
         $ids = $this->cloneQuery()
             ->select($this->idField)
+            ->setFirstResult(0)
+            ->setMaxResults(null)
             ->fetchFirstColumn();
 
         return $ids;

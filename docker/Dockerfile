@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         unzip \
         libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && docker-php-ext-install pdo_sqlite
+    && docker-php-ext-install pdo_sqlite pdo_mysql
 
 RUN pecl install xdebug \
     && docker-php-ext-enable xdebug \
