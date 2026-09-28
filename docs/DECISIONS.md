@@ -80,7 +80,7 @@
 
 **Why:** DQL's `AggregateExpression` takes a `SimpleArithmeticExpression`, so a literal is valid — the grammar is byte-identical in ORM 3.0.0 and 3.7.2, so it does not move within any 3.x the package accepts. `COUNT(1)` and `COUNT(<rootAlias>)` return the same number on both a plain and a joined query, because a root alias is never NULL. Reading `getRootAliases()[0]` raised `Undefined array key 0` from inside the adapter for a `QueryBuilder` with no `from()`, followed by an unrelated-looking DQL syntax error; the literal has no such arm, so no guard and no new exception are needed for it.
 
-**Careful:** `COUNT(*)` is the one spelling DQL rejects outright (`[Syntax Error] Expected Literal, got '*'`) — do not "normalise" the literal to it. `phpstan.neon.dist` now sets `reportPossiblyNonexistentGeneralArrayOffset: true`, which is what would have flagged the old offset access at `level: max`.
+**Careful:** `COUNT(*)` is the one spelling DQL rejects outright (`[Syntax Error] Expected Literal, got '*'`) — do not "normalise" the literal to it.
 
 ## `splitOnMarkers()` scans with a bounded `foreach`, not a hand-advanced cursor
 

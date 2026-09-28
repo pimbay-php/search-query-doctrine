@@ -12,7 +12,7 @@ License: Unlicense. Minimum PHP: 8.3.
 composer install
 composer php:cs         # php-cs-fixer, --dry-run --diff (check only, never mutates)
 composer php:cs:fix     # same, applies the fix
-composer php:stan       # phpstan analyse, level: max
+composer php:stan       # phpstan analyse, level: max — src and tests, one config each
 composer test:83-dbal3  # docker compose run — PHP 8.3 + DBAL ^3.8 + ORM ^3.5 + MariaDB 11
 composer test:83-dbal4  # docker compose run — PHP 8.3 + DBAL ^4.0 + ORM ^3.5 + MariaDB 11
 composer test:84-dbal3  # docker compose run — PHP 8.4 + DBAL ^3.8 + ORM ^3.5
@@ -24,9 +24,6 @@ composer test:coverage  # docker compose run, php83-dbal4 combo — phpunit --co
 composer test:mutation # infection — mutation testing, --min-msi=100 --min-covered-msi=100
 composer ci             # php:cs + php:stan + test:all + test:mutation
 ```
-
-`php:stan` is the authoritative type-safety gate — always run alongside `php:cs`/tests.
-A bare command never mutates — only the `:fix` variant writes to disk.
 
 ## Code Style
 
