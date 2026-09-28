@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PimBay\SearchQuery\Doctrine\Tests\Unit\Adapter;
 
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Query\QueryBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -13,6 +15,8 @@ use PimBay\SearchQuery\Doctrine\Tests\Fixture\DbalFixture;
 final class DbalSimpleAdapterTest extends TestCase
 {
     private DbalSimpleAdapter $adapter;
+
+    private Connection $connection;
 
     /**
      * @return iterable<string, array{int, int, string[]}>
@@ -35,23 +39,40 @@ final class DbalSimpleAdapterTest extends TestCase
 
     protected function setUp(): void
     {
-        $connection = DbalFixture::createConnection();
-        DbalFixture::seedProducts($connection, [
+        $this->connection = DbalFixture::createConnection();
+        DbalFixture::seedProducts($this->connection, [
             ['id' => 1, 'name' => 'a', 'price' => 10],
             ['id' => 2, 'name' => 'b', 'price' => 20],
             ['id' => 3, 'name' => 'c', 'price' => 30],
             ['id' => 4, 'name' => 'd', 'price' => 40],
             ['id' => 5, 'name' => 'e', 'price' => 50],
         ]);
-        $qb = DbalFixture::productQueryBuilder($connection)->orderBy('id');
+        $qb = DbalFixture::productQueryBuilder($this->connection)->orderBy('id');
 
         $this->adapter = new DbalSimpleAdapter($qb);
     }
 
     #[Test]
-    public function countReturnsTotalRowCountIgnoringLimitAndOffset(): void
+    public function countReturnsTotalRowCount(): void
     {
         self::assertSame(5, $this->adapter->count());
+    }
+
+    #[Test]
+    public function countIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        // Without the reset, the leftover OFFSET skips COUNT's single row and the count reads 0.
+        $adapter = new DbalSimpleAdapter($this->windowedQueryBuilder());
+
+        self::assertSame(5, $adapter->count());
+    }
+
+    #[Test]
+    public function allIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        $adapter = new DbalSimpleAdapter($this->windowedQueryBuilder());
+
+        self::assertSame(['a', 'b', 'c', 'd', 'e'], array_column(iterator_to_array($adapter->all()), 'name'));
     }
 
     #[Test]
@@ -99,9 +120,8 @@ final class DbalSimpleAdapterTest extends TestCase
     #[Test]
     public function countStripsOrderByEvenWhenItReferencesAColumnNotInTheAggregateSelect(): void
     {
-        // If resetOrderBy() were skipped, the leftover ORDER BY (on a column that only exists in
-        // the original SELECT list, not in `SELECT COUNT(*)`) would make SQLite fail the query —
-        // a real, observable failure mode, not just a cosmetic difference in generated SQL.
+        // Without resetOrderBy() the leftover ORDER BY references a column absent from `SELECT COUNT(*)`,
+        // which SQLite rejects — a real failure mode, not a cosmetic difference in generated SQL.
         $connection = DbalFixture::createConnection();
         DbalFixture::seedProducts($connection, [
             ['id' => 1, 'name' => 'a', 'price' => 10],
@@ -121,5 +141,13 @@ final class DbalSimpleAdapterTest extends TestCase
         $second = $this->adapter->pageView(0, 2);
 
         self::assertSame(array_column(iterator_to_array($first->results), 'name'), array_column(iterator_to_array($second->results), 'name'));
+    }
+
+    private function windowedQueryBuilder(): QueryBuilder
+    {
+        return DbalFixture::productQueryBuilder($this->connection)
+            ->orderBy('id')
+            ->setFirstResult(2)
+            ->setMaxResults(2);
     }
 }

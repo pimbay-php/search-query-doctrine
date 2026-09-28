@@ -34,6 +34,125 @@ jobs:
       - name: Tests
         run: vendor/bin/phpunit --no-coverage
 
+  test-mariadb:
+    name: PHP 8.3 + DBAL ${{ matrix.dbal-constraint }} + MariaDB 11
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dbal-constraint: ['^3.8', '^4.0']
+      fail-fast: false
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: search_query
+          MARIADB_USER: search_query
+          MARIADB_PASSWORD: search_query
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      SEARCH_QUERY_MYSQL_DSN: 'mysql://search_query:search_query@127.0.0.1:3306/search_query'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql
+
+      - name: Require Doctrine DBAL/ORM combo
+        run: composer require --no-interaction --no-progress --no-scripts "doctrine/dbal:${{ matrix.dbal-constraint }}" "doctrine/orm:^3.0"
+
+      - run: composer install --prefer-dist --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit --no-coverage
+
+  lowest-deps:
+    name: Lowest supported dependencies (PHP 8.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      # Every constraint at its floor. The other jobs pin a DBAL major but still resolve the highest release
+      # inside it, so this is the only one that proves the documented minimums are installable and pass.
+      # No composer audit here: dev tools at their floor carry advisories that say nothing about this package.
+      - name: Install the lowest release of every constraint
+        run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit --no-coverage
+
+  without-orm:
+    name: DBAL only, doctrine/orm absent (PHP 8.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      # doctrine/orm is require-dev only, so --no-dev is what a DBAL-only consumer actually installs.
+      - name: Install runtime dependencies only
+        run: composer update --no-dev --no-interaction --no-progress
+
+      # PHPUnit is a dev dependency and so absent here. The risk this covers is narrow and needs no
+      # framework: that nothing on the DBAL path resolves a Doctrine\ORM class at load time — in
+      # particular SearchTermsQuery's DbalQueryBuilder|OrmQueryBuilder parameter type.
+      - name: Exercise the DBAL path with doctrine/orm absent
+        run: |
+          php <<'SMOKE'
+          <?php
+          require 'vendor/autoload.php';
+
+          use Doctrine\DBAL\DriverManager;
+          use Doctrine\DBAL\Tools\DsnParser;
+          use PimBay\SearchQuery\Doctrine\Adapter\DbalIdentityAdapter;
+          use PimBay\SearchQuery\Doctrine\SearchTerms\SearchTermsQuery;
+          use PimBay\SearchQuery\SearchTerms\SearchTermsConfig;
+
+          $fail = static function (string $message): never {
+              fwrite(STDERR, $message.PHP_EOL);
+              exit(1);
+          };
+
+          if (class_exists(Doctrine\ORM\QueryBuilder::class)) {
+              $fail('doctrine/orm is installed, so this job proves nothing.');
+          }
+
+          $connection = DriverManager::getConnection((new DsnParser(['sqlite' => 'pdo_sqlite']))->parse('sqlite:///:memory:'));
+          $connection->executeStatement('CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
+          $connection->executeStatement("INSERT INTO product VALUES (1, 'red shirt'), (2, 'blue hat')");
+
+          $qb = $connection->createQueryBuilder()->select('id', 'name')->from('product')->orderBy('id');
+          (new SearchTermsQuery())->applyString($qb, 'name', 'shirt*', 't', new SearchTermsConfig());
+          $adapter = new DbalIdentityAdapter($qb, 'id');
+
+          if (1 !== $adapter->count()) {
+              $fail('count() returned '.$adapter->count().', expected 1.');
+          }
+
+          if ([1] !== $adapter->ids()) {
+              $fail('ids() returned '.json_encode($adapter->ids()).', expected [1].');
+          }
+
+          if (1 !== iterator_count(new ArrayIterator(iterator_to_array($adapter->pageView(0, 10)->results)))) {
+              $fail('pageView() did not return the single matching row.');
+          }
+
+          echo 'DBAL path OK with doctrine/orm absent'.PHP_EOL;
+          SMOKE
+
   coverage-and-mutation:
     name: Coverage + mutation testing (PHP 8.3 + DBAL 4.0)
     runs-on: ubuntu-latest
@@ -68,15 +187,21 @@ jobs:
 
       - run: composer install --prefer-dist --no-progress
 
+      - name: Manifest validation
+        run: composer validate --strict
+
       - name: Code style check
         run: composer php:cs
 
       - name: Static analysis
         run: composer php:stan
 
+      - name: Dependency advisories
+        run: composer audit
+
   sync:
     if: github.event_name == 'push'
-    needs: [test]
+    needs: [test, test-mariadb, lowest-deps, without-orm, static-analysis, coverage-and-mutation]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

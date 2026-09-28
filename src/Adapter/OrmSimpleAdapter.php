@@ -43,8 +43,11 @@ readonly class OrmSimpleAdapter implements PageAdapter, SliceAdapter, CountableA
     {
         $clone = $this->cloneQuery();
         $clone->resetDQLPart('orderBy');
+        $clone->setFirstResult(0)->setMaxResults(null);
 
-        return (int) $clone->select(\sprintf('COUNT(%s)', $clone->getRootAliases()[0]))
+        // `COUNT(1)`, not `COUNT(<rootAlias>)`: DQL's COUNT takes any simple arithmetic expression, so a
+        // literal needs no alias from the QueryBuilder. `COUNT(*)` is the one spelling DQL rejects outright.
+        return (int) $clone->select('COUNT(1)')
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -64,7 +67,11 @@ readonly class OrmSimpleAdapter implements PageAdapter, SliceAdapter, CountableA
     public function all(): iterable
     {
         /** @var iterable<(int|string), T> $result */
-        $result = $this->cloneQuery()->getQuery()->toIterable();
+        $result = $this->cloneQuery()
+            ->setFirstResult(0)
+            ->setMaxResults(null)
+            ->getQuery()
+            ->toIterable();
 
         return $result;
     }

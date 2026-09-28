@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PimBay\SearchQuery\Doctrine\Tests\Unit\Adapter;
 
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -20,6 +22,8 @@ final class OrmSimpleAdapterTest extends TestCase
      */
     private OrmSimpleAdapter $adapter;
 
+    private EntityManager $entityManager;
+
     /**
      * @return iterable<string, array{int, int, string[], bool}>
      */
@@ -31,23 +35,45 @@ final class OrmSimpleAdapterTest extends TestCase
 
     protected function setUp(): void
     {
-        $em = OrmFixture::createEntityManager();
-        OrmFixture::seedProducts($em, [
+        $this->entityManager = OrmFixture::createEntityManager();
+        OrmFixture::seedProducts($this->entityManager, [
             ['name' => 'a', 'price' => 10],
             ['name' => 'b', 'price' => 20],
             ['name' => 'c', 'price' => 30],
             ['name' => 'd', 'price' => 40],
             ['name' => 'e', 'price' => 50],
         ]);
-        $qb = $em->createQueryBuilder()->select('p')->from(Product::class, 'p')->orderBy('p.id');
+        $qb = $this->entityManager->createQueryBuilder()->select('p')->from(Product::class, 'p')->orderBy('p.id');
 
         $this->adapter = new OrmSimpleAdapter($qb);
     }
 
     #[Test]
-    public function countReturnsTotalRowCountIgnoringLimitAndOffset(): void
+    public function countReturnsTotalRowCount(): void
     {
         self::assertSame(5, $this->adapter->count());
+    }
+
+    #[Test]
+    public function countIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        // Without the reset, the leftover firstResult leaves getSingleScalarResult() with no row at all.
+        /** @var OrmSimpleAdapter<Product> $adapter */
+        $adapter = new OrmSimpleAdapter($this->windowedQueryBuilder());
+
+        self::assertSame(5, $adapter->count());
+    }
+
+    #[Test]
+    public function allIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        /** @var OrmSimpleAdapter<Product> $adapter */
+        $adapter = new OrmSimpleAdapter($this->windowedQueryBuilder());
+
+        self::assertSame(
+            ['a', 'b', 'c', 'd', 'e'],
+            array_map(static fn (Product $p) => $p->name, iterator_to_array($adapter->all())),
+        );
     }
 
     #[Test]
@@ -119,7 +145,7 @@ final class OrmSimpleAdapterTest extends TestCase
 
         $adapter = new OrmSimpleAdapter($qb);
         $reflection = new \ReflectionMethod(OrmSimpleAdapter::class, 'cloneQuery');
-        /** @var \Doctrine\ORM\QueryBuilder $clone */
+        /** @var QueryBuilder $clone */
         $clone = $reflection->invoke($adapter);
 
         self::assertNotSame($qb, $clone);
@@ -136,5 +162,18 @@ final class OrmSimpleAdapterTest extends TestCase
             array_map(static fn (Product $p) => $p->name, [...$first->results]),
             array_map(static fn (Product $p) => $p->name, [...$second->results]),
         );
+    }
+
+    private function productQueryBuilder(): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()->select('p')->from(Product::class, 'p');
+    }
+
+    private function windowedQueryBuilder(): QueryBuilder
+    {
+        return $this->productQueryBuilder()
+            ->orderBy('p.id')
+            ->setFirstResult(2)
+            ->setMaxResults(2);
     }
 }

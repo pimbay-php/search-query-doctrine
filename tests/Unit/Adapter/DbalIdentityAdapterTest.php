@@ -59,6 +59,24 @@ final class DbalIdentityAdapterTest extends TestCase
     }
 
     #[Test]
+    public function idsIgnoresAWindowAlreadySetOnTheConsumersQueryBuilder(): void
+    {
+        // ids() is the whole set, like all(); honouring the window truncates it with nothing to signal that.
+        $connection = DbalFixture::createConnection();
+        DbalFixture::seedProducts($connection, [
+            ['id' => 1, 'name' => 'a', 'price' => 10],
+            ['id' => 2, 'name' => 'b', 'price' => 20],
+            ['id' => 3, 'name' => 'c', 'price' => 30],
+        ]);
+        $qb = DbalFixture::productQueryBuilder($connection)
+            ->orderBy('id')
+            ->setFirstResult(1)
+            ->setMaxResults(1);
+
+        self::assertSame([1, 2, 3], (new DbalIdentityAdapter($qb, 'id'))->ids());
+    }
+
+    #[Test]
     public function inheritsCountableBehaviorFromDbalSimpleAdapter(): void
     {
         self::assertSame(3, $this->adapter->count());

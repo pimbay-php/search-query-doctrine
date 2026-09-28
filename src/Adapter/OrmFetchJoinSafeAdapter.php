@@ -20,7 +20,8 @@ use PimBay\SearchQuery\Page\PageAdapter;
 use PimBay\SearchQuery\Page\PageChunk;
 
 /**
- * For a QueryBuilder that fetch-joins a to-many association. `PageAdapter`/`CountableAdapter` only.
+ * For a QueryBuilder that fetch-joins a to-many association — see docs/DECISIONS.md for why a naive
+ * LIMIT/OFFSET is wrong there, and why this adapter covers page navigation only.
  *
  * @template T of object
  *

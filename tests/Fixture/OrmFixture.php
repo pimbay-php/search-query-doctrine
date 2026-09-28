@@ -13,9 +13,8 @@ use PimBay\SearchQuery\Doctrine\Tests\Fixture\Entity\Product;
 use PimBay\SearchQuery\Doctrine\Tests\Fixture\Entity\Tag;
 
 /**
- * Builds a real EntityManager against an in-memory SQLite database. Manual Configuration instead
- * of Doctrine\ORM\ORMSetup — ORMSetup's cache helpers require symfony/cache, which this project
- * doesn't depend on; ArrayCacheItemPool (this dir) fills the same PSR-6 slot for tests.
+ * Manual Configuration instead of ORMSetup — ORMSetup's cache helpers need symfony/cache, which this
+ * project does not depend on; ArrayCacheItemPool (this dir) fills the same PSR-6 slot.
  */
 final class OrmFixture
 {
