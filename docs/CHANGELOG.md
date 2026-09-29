@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-29
+
 ### Added
 - Functional tests run against MariaDB 11 as well as SQLite when `SEARCH_QUERY_MYSQL_DSN` is set.
 - `SearchTermsQuery` is now covered against a Doctrine ORM `QueryBuilder` too, not only a DBAL one — including that the `ESCAPE` clause survives DQL's re-quoting on the way into the generated SQL.
