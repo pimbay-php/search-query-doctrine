@@ -40,4 +40,19 @@ final class SqlHelper
     {
         return \sprintf("ESCAPE '%s'", self::LIKE_ESCAPE_CHAR);
     }
+
+    public static function contains(string $value): string
+    {
+        return '%'.self::escapeLike($value).'%';
+    }
+
+    public static function startsWith(string $value): string
+    {
+        return self::escapeLike($value).'%';
+    }
+
+    public static function endsWith(string $value): string
+    {
+        return '%'.self::escapeLike($value);
+    }
 }
