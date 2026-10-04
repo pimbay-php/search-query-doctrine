@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-04
+
 ### Added
 - `SqlHelper::contains()`, `startsWith()` and `endsWith()` build the `%…%`, `…%` and `%…` `LIKE` pattern for a value with its own `%`, `_` and escape character escaped.
 
