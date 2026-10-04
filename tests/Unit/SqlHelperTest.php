@@ -26,11 +26,35 @@ final class SqlHelperTest extends TestCase
         yield 'empty string' => ['', ''];
     }
 
+    /**
+     * @return iterable<string, array{string, string, string, string}>
+     */
+    public static function patternProvider(): iterable
+    {
+        yield 'plain' => ['hello', '%hello%', 'hello%', '%hello'];
+        yield 'wildcards are escaped' => ['100%_off', '%100~%~_off%', '100~%~_off%', '%100~%~_off'];
+        yield 'the escape char is escaped' => ['a~b', '%a~~b%', 'a~~b%', '%a~~b'];
+        yield 'empty string' => ['', '%%', '%', '%'];
+    }
+
     #[Test]
     #[DataProvider('likeProvider')]
     public function escapesLikeWildcardsAndTheEscapeCharItself(string $input, string $expected): void
     {
         self::assertSame($expected, SqlHelper::escapeLike($input));
+    }
+
+    #[Test]
+    #[DataProvider('patternProvider')]
+    public function containsStartsWithAndEndsWithPlaceTheWildcardAroundTheEscapedValue(
+        string $input,
+        string $contains,
+        string $startsWith,
+        string $endsWith,
+    ): void {
+        self::assertSame($contains, SqlHelper::contains($input));
+        self::assertSame($startsWith, SqlHelper::startsWith($input));
+        self::assertSame($endsWith, SqlHelper::endsWith($input));
     }
 
     #[Test]
